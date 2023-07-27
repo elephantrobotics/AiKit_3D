@@ -10,6 +10,18 @@
     <height>796</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>1131</width>
+    <height>796</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>1131</width>
+    <height>796</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
@@ -54,22 +66,38 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item row="0" column="1">
-        <widget class="QLabel" name="title">
-         <property name="font">
-          <font>
-           <family>Arial</family>
-           <pointsize>18</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
+       <item row="0" column="3">
+        <widget class="QPushButton" name="close_btn">
+         <property name="minimumSize">
+          <size>
+           <width>30</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>30</width>
+           <height>30</height>
+          </size>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(255, 255, 255，200);
-color: rgb(255, 255, 255);</string>
+          <string notr="true"/>
          </property>
          <property name="text">
-          <string>Elephant Robotics AI Kits</string>
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normaloff>C:/Users/Elephantrobotics/.designer/AiKit_UI_img/close.ico</normaloff>C:/Users/Elephantrobotics/.designer/AiKit_UI_img/close.ico</iconset>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>30</width>
+           <height>30</height>
+          </size>
          </property>
         </widget>
        </item>
@@ -101,6 +129,25 @@ color: rgb(255, 255, 255);</string>
          </property>
          <property name="margin">
           <number>-19</number>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="title">
+         <property name="font">
+          <font>
+           <family>Arial</family>
+           <pointsize>18</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(255, 255, 255，200);
+color: rgb(255, 255, 255);</string>
+         </property>
+         <property name="text">
+          <string>Elephant Robotics AI Kits</string>
          </property>
         </widget>
        </item>
@@ -138,86 +185,7 @@ color: rgb(255, 255, 255);</string>
          </property>
          <property name="icon">
           <iconset>
-           <normaloff>../AiKit_UI_img/min.ico</normaloff>../AiKit_UI_img/min.ico</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>30</width>
-           <height>30</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="3">
-        <widget class="QPushButton" name="max_btn">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>30</width>
-           <height>30</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>30</width>
-           <height>30</height>
-          </size>
-         </property>
-         <property name="cursor">
-          <cursorShape>PointingHandCursor</cursorShape>
-         </property>
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset>
-           <normaloff>../AiKit_UI_img/max.ico</normaloff>../AiKit_UI_img/max.ico</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>30</width>
-           <height>30</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="4">
-        <widget class="QPushButton" name="close_btn">
-         <property name="minimumSize">
-          <size>
-           <width>30</width>
-           <height>30</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>30</width>
-           <height>30</height>
-          </size>
-         </property>
-         <property name="cursor">
-          <cursorShape>PointingHandCursor</cursorShape>
-         </property>
-         <property name="styleSheet">
-          <string notr="true"/>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset>
-           <normaloff>../AiKit_UI_img/close.ico</normaloff>../AiKit_UI_img/close.ico</iconset>
+           <normaloff>C:/Users/Elephantrobotics/.designer/AiKit_UI_img/min.ico</normaloff>C:/Users/Elephantrobotics/.designer/AiKit_UI_img/min.ico</iconset>
          </property>
          <property name="iconSize">
           <size>
@@ -237,6 +205,9 @@ color: rgb(255, 255, 255);</string>
         <width>0</width>
         <height>0</height>
        </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
       </property>
       <property name="frameShape">
        <enum>QFrame::NoFrame</enum>
@@ -263,9 +234,10 @@ color: rgb(255, 255, 255);</string>
         <item>
          <widget class="QWidget" name="body_widget" native="true">
           <property name="styleSheet">
-           <string notr="true">background-color: rgb(243, 243, 243);</string>
+           <string notr="true">background-color: rgb(243, 243, 243);
+</string>
           </property>
-          <layout class="QHBoxLayout" name="horizontalLayout" stretch="3,7">
+          <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0">
            <property name="leftMargin">
             <number>0</number>
            </property>
@@ -385,10 +357,19 @@ border-style: outset;</string>
               </item>
               <item>
                <widget class="QWidget" name="widget_2" native="true">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
                 <property name="styleSheet">
                  <string notr="true">background-color: rgb(236, 240, 241);</string>
                 </property>
-                <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,2">
+                <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0">
+                 <property name="spacing">
+                  <number>40</number>
+                 </property>
                  <property name="leftMargin">
                   <number>10</number>
                  </property>
@@ -403,6 +384,12 @@ border-style: outset;</string>
                  </property>
                  <item>
                   <widget class="QWidget" name="widget_3" native="true">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>90</height>
+                    </size>
+                   </property>
                    <layout class="QVBoxLayout" name="verticalLayout_2">
                     <item>
                      <widget class="QLabel" name="port_lab">
@@ -455,14 +442,38 @@ border-style: outset;</string>
                       </property>
                      </widget>
                     </item>
+                    <item>
+                     <widget class="QLabel" name="ip_address_lab">
+                      <property name="font">
+                       <font>
+                        <family>Arial</family>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>IP Address</string>
+                      </property>
+                     </widget>
+                    </item>
                    </layout>
                   </widget>
                  </item>
                  <item>
                   <widget class="QWidget" name="widget_4" native="true">
+                   <property name="minimumSize">
+                    <size>
+                     <width>244</width>
+                     <height>0</height>
+                    </size>
+                   </property>
                    <layout class="QVBoxLayout" name="verticalLayout_3">
                     <item>
                      <widget class="QComboBox" name="comboBox_port">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
                       <property name="font">
                        <font>
                         <family>Arial</family>
@@ -479,6 +490,12 @@ border-style: outset;</string>
                     </item>
                     <item>
                      <widget class="QComboBox" name="comboBox_device">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
                       <property name="font">
                        <font>
                         <family>Arial</family>
@@ -510,6 +527,12 @@ border-style: outset;</string>
                     </item>
                     <item>
                      <widget class="QComboBox" name="comboBox_baud">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
                       <property name="font">
                        <font>
                         <family>Arial</family>
@@ -527,6 +550,28 @@ border-style: outset;</string>
                         <string>115200</string>
                        </property>
                       </item>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLineEdit" name="lineEdit_address">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>25</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <family>Arial</family>
+                        <pointsize>10</pointsize>
+                       </font>
+                      </property>
+                      <property name="styleSheet">
+                       <string notr="true">border:1px solid black;</string>
+                      </property>
+                      <property name="text">
+                       <string/>
+                      </property>
                      </widget>
                     </item>
                    </layout>
@@ -562,6 +607,9 @@ border-style: outset;</string>
                    </property>
                    <property name="text">
                     <string>Control</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
                    </property>
                   </widget>
                  </item>
@@ -744,7 +792,7 @@ border-style: outset;</string>
                        <string notr="true">color: rgb(136, 136, 136);</string>
                       </property>
                       <property name="text">
-                       <string>Algorithm:</string>
+                       <string>Current Algorithm:</string>
                       </property>
                      </widget>
                     </item>
@@ -763,7 +811,7 @@ border-style: outset;</string>
 background-color: rgb(243, 243, 243,200);</string>
                       </property>
                       <property name="text">
-                       <string>Algorithm:</string>
+                       <string/>
                       </property>
                      </widget>
                     </item>
@@ -840,6 +888,185 @@ border-style: outset;</string>
                </widget>
               </item>
               <item>
+               <widget class="QWidget" name="widget_9" native="true">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>90</height>
+                 </size>
+                </property>
+                <layout class="QVBoxLayout" name="verticalLayout_6">
+                 <item>
+                  <layout class="QVBoxLayout" name="verticalLayout_5">
+                   <item>
+                    <widget class="QLabel" name="offset_lab">
+                     <property name="font">
+                      <font>
+                       <family>Arial</family>
+                       <pointsize>14</pointsize>
+                       <weight>75</weight>
+                       <bold>true</bold>
+                      </font>
+                     </property>
+                     <property name="text">
+                      <string>Offset</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <layout class="QHBoxLayout" name="horizontalLayout_11">
+                     <property name="spacing">
+                      <number>16</number>
+                     </property>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="0,0">
+                       <property name="spacing">
+                        <number>6</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="x_lab">
+                         <property name="maximumSize">
+                          <size>
+                           <width>10</width>
+                           <height>16777215</height>
+                          </size>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>9</pointsize>
+                           <weight>75</weight>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="styleSheet">
+                          <string notr="true">color: rgb(136, 136, 136);</string>
+                         </property>
+                         <property name="text">
+                          <string>X:</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="x_offset_lineEdit">
+                         <property name="maximumSize">
+                          <size>
+                           <width>90</width>
+                           <height>16777215</height>
+                          </size>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>10</pointsize>
+                          </font>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QGridLayout" name="gridLayout_2">
+                       <item row="0" column="0">
+                        <widget class="QLabel" name="y_lab">
+                         <property name="maximumSize">
+                          <size>
+                           <width>10</width>
+                           <height>16777215</height>
+                          </size>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>9</pointsize>
+                           <weight>75</weight>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="styleSheet">
+                          <string notr="true">color: rgb(136, 136, 136);</string>
+                         </property>
+                         <property name="text">
+                          <string>Y：</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="1">
+                        <widget class="QLineEdit" name="y_offset_lineEdit">
+                         <property name="maximumSize">
+                          <size>
+                           <width>90</width>
+                           <height>16777215</height>
+                          </size>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>10</pointsize>
+                          </font>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="0,0">
+                       <property name="spacing">
+                        <number>6</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="z_lab">
+                         <property name="maximumSize">
+                          <size>
+                           <width>10</width>
+                           <height>16777215</height>
+                          </size>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>9</pointsize>
+                           <weight>75</weight>
+                           <bold>true</bold>
+                          </font>
+                         </property>
+                         <property name="styleSheet">
+                          <string notr="true">color: rgb(136, 136, 136);</string>
+                         </property>
+                         <property name="text">
+                          <string>Z：</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="z_offset_lineEdit">
+                         <property name="maximumSize">
+                          <size>
+                           <width>90</width>
+                           <height>16777215</height>
+                          </size>
+                         </property>
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>10</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string/>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
                <widget class="QLabel" name="label">
                 <property name="maximumSize">
                  <size>
@@ -882,6 +1109,9 @@ border-style: outset;</string>
                    </property>
                    <property name="text">
                     <string>Algorithm</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
                    </property>
                   </widget>
                  </item>
@@ -952,7 +1182,12 @@ border-style: outset;</string>
                    </item>
                    <item>
                     <property name="text">
-                     <string>yolov5</string>
+                     <string>yolo v5</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Palletizing</string>
                     </property>
                    </item>
                   </widget>
@@ -1101,18 +1336,18 @@ border-style: outset;</string>
                 <property name="minimumSize">
                  <size>
                   <width>600</width>
-                  <height>50</height>
+                  <height>80</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>700</width>
-                  <height>50</height>
+                  <height>80</height>
                  </size>
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>14</pointsize>
+                  <pointsize>13</pointsize>
                   <weight>75</weight>
                   <bold>true</bold>
                  </font>
@@ -1122,6 +1357,9 @@ border-style: outset;</string>
                 </property>
                 <property name="text">
                  <string/>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
                 </property>
                 <property name="wordWrap">
                  <bool>true</bool>
@@ -1181,18 +1419,20 @@ border-style: outset;</string>
                    </property>
                    <property name="font">
                     <font>
-                     <weight>75</weight>
-                     <bold>true</bold>
+                     <family>Arial</family>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
                     </font>
                    </property>
                    <property name="cursor">
                     <cursorShape>PointingHandCursor</cursorShape>
                    </property>
                    <property name="styleSheet">
-                    <string notr="true"/>
+                    <string notr="true">border:1px solid white;</string>
                    </property>
                    <property name="text">
-                    <string/>
+                    <string>Camera Color Screen</string>
                    </property>
                    <property name="alignment">
                     <set>Qt::AlignCenter</set>
@@ -1219,8 +1459,20 @@ border-style: outset;</string>
                      <height>240</height>
                     </size>
                    </property>
+                   <property name="font">
+                    <font>
+                     <family>Arial</family>
+                     <pointsize>11</pointsize>
+                    </font>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">border:1px solid white;</string>
+                   </property>
                    <property name="text">
-                    <string/>
+                    <string>Camera Depth Screen</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
                    </property>
                   </widget>
                  </item>
@@ -1301,7 +1553,13 @@ border-style: outset;</string>
                      <widget class="QPushButton" name="current_coord_btn">
                       <property name="minimumSize">
                        <size>
-                        <width>0</width>
+                        <width>193</width>
+                        <height>30</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>193</width>
                         <height>30</height>
                        </size>
                       </property>
@@ -1323,12 +1581,24 @@ border: 2px groove gray;
 border-style: outset;</string>
                       </property>
                       <property name="text">
-                       <string>  current coordinates</string>
+                       <string>current coordinates</string>
                       </property>
                      </widget>
                     </item>
                     <item>
                      <widget class="QLabel" name="cuttent_coord_lab">
+                      <property name="minimumSize">
+                       <size>
+                        <width>450</width>
+                        <height>30</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>450</width>
+                        <height>30</height>
+                       </size>
+                      </property>
                       <property name="font">
                        <font>
                         <family>Arial</family>
@@ -1367,7 +1637,13 @@ border-style: outset;</string>
                      <widget class="QPushButton" name="image_coord_btn">
                       <property name="minimumSize">
                        <size>
-                        <width>0</width>
+                        <width>193</width>
+                        <height>30</height>
+                       </size>
+                      </property>
+                      <property name="maximumSize">
+                       <size>
+                        <width>193</width>
                         <height>30</height>
                        </size>
                       </property>
@@ -1389,7 +1665,7 @@ border: 2px groove gray;
 border-style: outset;</string>
                       </property>
                       <property name="text">
-                       <string>  image coordinates</string>
+                       <string>image coordinates</string>
                       </property>
                      </widget>
                     </item>

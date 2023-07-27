@@ -75,7 +75,7 @@ class camera_stream():
             except ObException as e:
                 pass
                 print("function: %s\nargs: %s\nmessage: %s\ntype: %d\nstatus: %d" % (
-                e.getName(), e.getArgs(), e.getMessage(), e.getExceptionType(), e.getStatus()))
+                    e.getName(), e.getArgs(), e.getMessage(), e.getExceptionType(), e.getStatus()))
         except ObException as e:
             pass
             print("function: %s\nargs: %s\nmessage: %s\ntype: %d\nstatus: %d" % (
@@ -214,7 +214,7 @@ class camera_Thread(threading.Thread):
                 if self.pixel_z != 0:
                     self.convert_depth_to_world()
                     self.pixel_x, self.pixel_y, self.pixel_z = 0, 0, 0
-                    print("x,y,z:", (self.world_x, self.world_y, self.world_z))
+                    # print("x,y,z:", (self.world_x, self.world_y, self.world_z))
 
             # cv2.imshow("rgb_show",cv2.cvtColor(self.rgb_show,cv2.COLOR_BGR2RGB))
             # cv2.imshow("depth_show",self.depth_show)
@@ -224,5 +224,6 @@ class camera_Thread(threading.Thread):
 
 
 if __name__ == '__main__':
-    camera = camera_Thread('Color recognition')
-    camera.run()
+    # camera = camera_Thread('Color recognition')
+    # camera.run()
+    pass
