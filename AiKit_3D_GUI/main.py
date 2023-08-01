@@ -380,10 +380,27 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
         self.algorithm_lab.setText(self.mode)
         if self.mode == '颜色识别':
             self.mode = 'Color recognition'
+            self.x_offset_lineEdit.setEnabled(True)
+            self.y_offset_lineEdit.setEnabled(True)
+            self.z_offset_lineEdit.setEnabled(True)
         elif self.mode == '形状识别':
             self.mode = 'Shape recognition'
+            self.x_offset_lineEdit.setEnabled(True)
+            self.y_offset_lineEdit.setEnabled(True)
+            self.z_offset_lineEdit.setEnabled(True)
         elif self.mode == '特征点识别':
             self.mode = 'Keypoints'
+            self.x_offset_lineEdit.setEnabled(True)
+            self.y_offset_lineEdit.setEnabled(True)
+            self.z_offset_lineEdit.setEnabled(True)
+        elif self.mode == 'yolo v5':
+            self.x_offset_lineEdit.setEnabled(True)
+            self.y_offset_lineEdit.setEnabled(True)
+            self.z_offset_lineEdit.setEnabled(True)
+        elif self.mode == '码垛' or self.mode == 'Palletizing':
+            self.x_offset_lineEdit.setEnabled(False)
+            self.y_offset_lineEdit.setEnabled(False)
+            self.z_offset_lineEdit.setEnabled(False)
 
     def has_mycobot(self):
         """Check whether it is connected on mycobot"""
