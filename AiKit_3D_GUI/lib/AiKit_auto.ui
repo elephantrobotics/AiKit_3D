@@ -1195,6 +1195,9 @@ border-style: outset;</string>
                 </layout>
                </widget>
               </item>
+              <item>
+               <widget class="QWidget" name="widget_10" native="true"/>
+              </item>
              </layout>
             </widget>
            </item>
