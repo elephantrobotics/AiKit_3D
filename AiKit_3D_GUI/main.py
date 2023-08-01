@@ -1,10 +1,12 @@
 #! /usr/bin/env pyhton3.9
 # encoding:utf-8
+import os
 import sys
 import threading
 import time
 import traceback
 
+import cv2
 import numpy as np
 import serial
 import serial.tools.list_ports
@@ -13,8 +15,13 @@ from PyQt5.Qt import *
 from pymycobot.mycobot import MyCobot
 from pymycobot.mycobotsocket import MyCobotSocket
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from camera import camera_Thread
 from lib.AiKit_auto import Ui_AiKit_UI as AiKit_window
+from stacking.camera import VideoStreamPipe
+from cube_gripper import Object_detect
+from get_coord import Get_coord
+
 from log_file import MyLogging
 
 
@@ -52,6 +59,22 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
         self.camera_x, self.camera_y, self.camera_z = 0, 0, 0  # 相机相对于机械臂的实际坐标
         self.real_x, self.real_y, self.real_z = 0, 0, 0
         self.port_list = []
+        self.pos_x, self.pos_y, self.pos_z = 0, 0, 0  # 码垛识别程序的定位坐标
+        self.grip_pos_x, self.grip_pos_y, self.grip_pos_z = 0, 0, 0  # 码垛识别程序的像素坐标
+        self.pallet_camera = None
+        self.flag = 0
+        # 码垛识别程序的画面数据
+        self.rgb_show = None
+        self.rgb_data = None
+        self.depth_show = None
+        self.depth_data = None
+        self.depth_flatten = None
+        # self.get_coord = None
+        self.pallet_gripper = None
+
+        # 颜色、图像、特征点、yolov5画面数据
+        self.camera_rgb_show = None
+        self.camera_depth_show = None
 
         self.language = 1  # Control language, 1 is English, 2 is Chinese
         if self.language == 1:
@@ -85,11 +108,13 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
         self.z_offset_lineEdit.setValidator(self.validator)
 
         # 设置IP地址的正则表达式模式
-        self.ip_pattern = QRegExp('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')
+        self.ip_pattern = QRegExp(
+            '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')
         self.ip_validator = QRegExpValidator(self.ip_pattern, self.lineEdit_address)
         self.lineEdit_address.setPlaceholderText('Please enter an IP address')
         # 将验证器设置给QLineEdit控件
         self.lineEdit_address.setValidator(self.ip_validator)
+        # self.pallet_recognize()
 
     def mousePressEvent(self, event):
         """点击窗口特定区域移动窗口位置"""
@@ -299,6 +324,10 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
             else:
                 self.connect_btn.setEnabled(False)
                 self.btn_color(self.connect_btn, 'gray')
+
+        else:
+            self.connect_btn.setEnabled(True)
+            self.btn_color(self.connect_btn, 'green')
 
     def init_offset_value(self):
         """初始化偏移量的值"""
@@ -590,6 +619,7 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
 
     # 开始识别
     def start_detect(self):
+        self.mode = self.comboBox_function.currentText()
         green_btn = [self.open_camera_btn, self.current_coord_btn, self.image_coord_btn]
         for i in green_btn:
             i.setEnabled(True)
@@ -599,15 +629,323 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
         self.camera_x = int(self.x_offset_lineEdit.text())
         self.camera_y = int(self.y_offset_lineEdit.text())
         self.camera_z = int(self.z_offset_lineEdit.text())
-        if self.mode:
+        self.loger.info(self.mode)
+        if self.mode != '码垛' and self.mode != 'Palletizing':
+            self.loger.info(str(self.mode))
             self.detector = camera_Thread(str(self.mode))
             self.detector.start()
+            # 开启获取画面数据线程
+            camera_rgb_ = threading.Thread(target=self.camera_rgb_depth)
+            camera_rgb_.daemon = True
+            camera_rgb_.start()
             try:
                 while True:
                     self.detector.run()
                     time.sleep(1)
             except KeyboardInterrupt:
                 pass
+        else:
+            self.open_camera_btn.setEnabled(True)
+            self.btn_color(self.open_camera_btn, 'green')
+            # 进行码垛程序的识别
+            self.loger.info('码垛识别')
+            pallet_camera = threading.Thread(target=self.pallet_recognize)
+            pallet_camera.start()
+
+    def camera_rgb_depth(self):
+        """获取颜色识别、图像识别、特征点识别、yolov5识别 摄像头画面数据"""
+        try:
+            while True:
+                self.camera_rgb_show = self.detector.rgb_show
+                self.camera_depth_show = self.detector.depth_show
+                time.sleep(0.2)
+        except Exception as e:
+            e = traceback.format_exc()
+            self.loger.info(e)
+
+    def pallet_recognize(self):
+        """码垛识别"""
+        try:
+            self.btn_color(self.open_camera_btn, 'green')
+            self.pallet_camera = VideoStreamPipe()
+            self.pallet_gripper = Object_detect()
+            self.flag = 0
+            while True:
+                self.rgb_data, self.depth_data, self.depth_show = self.pallet_camera.camera()
+                self.depth_flatten = self.depth_data[50:145, 131:230].flatten()
+                get_coord = Get_coord(self.rgb_data, self.depth_data)
+                get_coord.get_world_coord()
+                self.rgb_show = cv2.flip(self.rgb_data, 1)
+                self.rgb_show = cv2.cvtColor(self.rgb_show, cv2.COLOR_BGR2RGB)
+
+                if len(get_coord.pos) == 0:
+                    continue
+                else:
+                    if self.flag == 4:
+                        self.flag = 0
+                    else:
+                        if get_coord.grip_pos is not None:
+                            x, y, z = get_coord.grip_pos
+                            if get_coord.label is not None:
+                                if z > 370 or z == 0.0:
+                                    pass
+                                else:
+                                    if 324 in self.depth_flatten or 325 in self.depth_flatten or 326 in self.depth_flatten:
+                                        if z < 330:
+                                            self.pos_x, self.pos_y, self.pos_z = self.pallet_gripper.get_position(x, y,
+                                                                                                                  z)
+                                        else:
+                                            continue
+                                    elif 344 in self.depth_flatten or 345 in self.depth_flatten or 342 in self.depth_flatten:
+                                        if z < 350:
+                                            self.pos_x, self.pos_y, self.pos_z = self.pallet_gripper.get_position(x, y,
+                                                                                                                  z)
+                                        else:
+                                            continue
+                                    elif 360 in self.depth_flatten or 361 in self.depth_flatten or 362 in self.depth_flatten:
+                                        if z < 370:
+                                            self.pos_x, self.pos_y, self.pos_z = self.pallet_gripper.get_position(x, y,
+                                                                                                                  z)
+                                        else:
+                                            continue
+                                    else:
+                                        continue
+                                    self.grip_pos_x = get_coord.grip_pos[0]
+                                    self.grip_pos_y = get_coord.grip_pos[1]
+                                    self.grip_pos_z = get_coord.grip_pos[2]
+                                    self.start_move_pallet(self.pos_x, self.pos_y, self.pos_z, self.flag)
+                                    print("task:", (self.pos_x, self.pos_y, self.pos_z))
+                                    self.flag += 1
+            self.pallet_camera.pipe.stop()
+
+        except Exception as e:
+            e = traceback.format_exc()
+            self.loger.error(e)
+
+    def start_move_pallet(self, x, y, z, id):
+        """检查当前设备并开始运行码垛程序"""
+        self.device = self.comboBox_device.currentText()
+        if self.device == 'mechArm 270 for M5':
+            move = threading.Thread(target=self.move_270_M5, args=(x, y, z, id))
+            move.start()
+        elif self.device == 'mechArm 270 for Pi':
+            move = threading.Thread(target=self.move_270_Pi, args=(x, y, z, id))
+            move.start()
+        elif self.device == 'myCobot 280 for M5':
+            move = threading.Thread(target=self.move_280_M5, args=(x, y, z, id))
+            move.start()
+        elif self.device == 'myCobot 280 for Pi':
+            move = threading.Thread(target=self.move_280_Pi, args=(x, y, z, id))
+            move.start()
+
+    def move_270_M5(self, x, y, z, id):
+        """
+        码垛程序移动机械臂
+        """
+        self.loger.info(str(self.mode) + '开始移动抓取.......')
+        initial_pos = [-95.44, -17.75, 14.23, 1.14, 87.8, 0]
+        precatch_pos = [-2.76, 0, -5.75, 1.05, 90.04, -0.87]
+        box_angles = [
+            [-50.37, 12.21, -7.03, 1.14, 56.62, 1.93],  # D Sorting area
+            [-30.76, 48.33, -52.55, 0.61, 55.98, 1.75],  # C Sorting area
+            [52.03, 23.55, -25.57, 0.87, 65, 1.66],  # A Sorting area
+            [90.43, 20.21, -25.48, 0.17, 75, 1.66],  # B Sorting area
+        ]
+        # 移动到预备抓取位置
+        self.robotics.send_angles(precatch_pos, 50)
+        time.sleep(3)
+        # 移动到物体上方
+        target_coords = self.get_current_coords().copy()
+        target_coords[0] = x
+        target_coords[1] = y
+        target_coords[2] = z + 30
+
+        self.robotics.send_coords(target_coords, 80, 1)
+        time.sleep(4)
+        # 向下
+        # self.mc.send_coord(3, z+30, 80)
+        # time.sleep(1)
+        self.robotics.send_coord(3, z, 80)
+        time.sleep(1)
+        # 打开吸泵
+        self.pump_on()
+        time.sleep(2)
+        self.robotics.send_coord(1, x + 5, 20)
+        time.sleep(1)
+        self.robotics.send_coord(3, z + 80, 80)
+        time.sleep(1)
+
+        self.robotics.send_coord(3, z + 80, 80)
+        time.sleep(1)
+        # self.mc.send_angles(self.move_angles[2], 70)
+        # time.sleep(3)
+        # 移动到盒子
+        self.robotics.send_angles(box_angles[id], 50)
+        time.sleep(3)
+        #
+        # # 关闭吸泵
+        self.pump_off()
+        time.sleep(3)
+
+        # 回到初始位置
+        self.robotics.send_angles(initial_pos, 50)
+        time.sleep(3)
+
+    def move_270_Pi(self, x, y, z, id):
+        """
+        码垛程序移动机械臂
+        """
+        initial_pos = [-95.44, -17.75, 14.23, 1.14, 87.8, 0]
+        precatch_pos = [-2.76, 0, -5.75, 1.05, 90.04, -0.87]
+        box_angles = [
+            [-50.37, 12.21, -7.03, 1.14, 56.62, 1.93],  # D Sorting area
+            [-30.76, 48.33, -52.55, 0.61, 55.98, 1.75],  # C Sorting area
+            [52.03, 23.55, -25.57, 0.87, 65, 1.66],  # A Sorting area
+            [90.43, 20.21, -25.48, 0.17, 75, 1.66],  # B Sorting area
+        ]
+        # 移动到预备抓取位置
+        self.robotics.send_angles(precatch_pos, 50)
+        time.sleep(3)
+        # 移动到物体上方
+        # target_coords = self.get_current_coords().copy()
+        target_coords = [112.5, -4.7, 104.7, 179, 2.02, 177.09]
+        target_coords[0] = x
+        target_coords[1] = y
+        target_coords[2] = z + 30
+
+        self.robotics.send_coords(target_coords, 80, 1)
+        time.sleep(4)
+        # 向下
+        # self.mc.send_coord(3, z+30, 80)
+        # time.sleep(1)
+        self.robotics.send_coord(3, z, 80)
+        time.sleep(1)
+        # 打开吸泵
+        self.pump_on()
+        time.sleep(2)
+        self.robotics.send_coord(1, x + 10, 20)
+        time.sleep(1)
+        self.robotics.send_coord(3, z + 60, 80)
+        time.sleep(1)
+
+        self.robotics.send_coord(3, z + 70, 80)
+        time.sleep(1)
+        # self.mc.send_angles(self.move_angles[2], 70)
+        # time.sleep(3)
+        # 移动到盒子
+        self.robotics.send_angles(box_angles[id], 50)
+        time.sleep(3)
+
+        # # 关闭吸泵
+        self.pump_off()
+        time.sleep(3)
+        # 回到初始位置
+        self.robotics.send_angles(initial_pos, 50)
+        time.sleep(3)
+
+    def move_280_M5(self, x, y, z, id):
+        """
+        码垛程序移动机械臂
+        """
+        self.loger.info(str(self.mode) + '开始移动抓取.......')
+        initial_pos = [-28.39, 45.87, -92.37, -41.3, 2.02, 9.58]
+        precatch_pos = [4.92, 28.21, -133.76, 18.63, 0.17, 11.16]
+        box_angles = [
+            [-30.4, -3.33, -118.21, 37.61, 3.69, 76.55],  # D Sorting area
+            [-18.28, -72.07, 0.52, -7.03, 0, 87.01],  # C Sorting area
+            [76.55, -14.76, -90.17, 19.16, 1.58, -45.52],  # A Sorting area
+            [107.4, 0, -117.86, 34.71, 6.41, -21.7],  # B Sorting area
+        ]
+        # 移动到预备抓取位置
+        self.robotics.send_angles(precatch_pos, 50)
+        time.sleep(3)
+        # 移动到物体上方
+        target_coords = self.get_current_coords().copy()
+        target_coords[0] = x
+        target_coords[1] = y
+        target_coords[2] = z + 30
+
+        self.robotics.send_coords(target_coords, 80, 1)
+        time.sleep(4)
+        # 向下
+        # self.mc.send_coord(3, z+30, 80)
+        # time.sleep(1)
+        self.robotics.send_coord(3, z, 80)
+        time.sleep(1)
+        # 打开吸泵
+        self.pump_on()
+        time.sleep(2)
+        self.robotics.send_coord(1, x + 5, 20)
+        time.sleep(1)
+        self.robotics.send_coord(3, z + 80, 80)
+        time.sleep(1)
+
+        self.robotics.send_coord(3, z + 80, 80)
+        time.sleep(1)
+        # self.mc.send_angles(self.move_angles[2], 70)
+        # time.sleep(3)
+        # 移动到盒子
+        self.robotics.send_angles(box_angles[id], 50)
+        time.sleep(3)
+        #
+        # # 关闭吸泵
+        self.pump_off()
+        time.sleep(3)
+        # #
+        # # 回到初始位置
+        self.robotics.send_angles(initial_pos, 50)
+        time.sleep(3)
+
+    def move_280_Pi(self, x, y, z, id):
+        """
+        码垛程序移动机械臂
+        """
+        initial_pos = [-28.39, 45.87, -92.37, -41.3, 2.02, 9.58]
+        precatch_pos = [4.92, 28.21, -133.76, 18.63, 0.17, 11.16]
+        box_angles = [
+            [-30.4, -3.33, -118.21, 37.61, 3.69, 76.55],  # D Sorting area
+            [-18.28, -72.07, 0.52, -7.03, 0, 87.01],  # C Sorting area
+            [76.55, -14.76, -90.17, 19.16, 1.58, -45.52],  # A Sorting area
+            [107.4, 0, -117.86, 34.71, 6.41, -21.7],  # B Sorting area
+        ]
+        # 移动到预备抓取位置
+        self.robotics.send_angles(precatch_pos, 50)
+        time.sleep(3)
+        # 移动到物体上方
+        target_coords = self.get_current_coords().copy()
+        target_coords[0] = x
+        target_coords[1] = y
+        target_coords[2] = z + 30
+
+        self.robotics.send_coords(target_coords, 80, 1)
+        time.sleep(4)
+        # 向下
+        # self.mc.send_coord(3, z+30, 80)
+        # time.sleep(1)
+        self.robotics.send_coord(3, z, 80)
+        time.sleep(1)
+        # 打开吸泵
+        self.pump_on()
+        time.sleep(2)
+        self.robotics.send_coord(1, x + 10, 20)
+        time.sleep(1)
+        self.robotics.send_coord(3, z + 60, 80)
+        time.sleep(1)
+
+        self.robotics.send_coord(3, z + 70, 80)
+        time.sleep(1)
+        # self.mc.send_angles(self.move_angles[2], 70)
+        # time.sleep(3)
+        # 移动到盒子
+        self.robotics.send_angles(box_angles[id], 50)
+        time.sleep(3)
+
+        # # 关闭吸泵
+        self.pump_off()
+        time.sleep(3)
+        # 回到初始位置
+        self.robotics.send_angles(initial_pos, 50)
+        time.sleep(3)
 
     def prompts(self, msg=None):
         """show camera prompts"""
@@ -621,6 +959,7 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
     def camera_check(self):
         """检查相机开启情况"""
         current_status = self.open_camera_btn.text()
+
         if current_status == '打开' or current_status == 'Open':
             self.open_camera()
         elif current_status == '关闭' or current_status == 'Close':
@@ -628,9 +967,14 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
 
     # 相机线程
     def open_camera(self):
+        self.mode = self.comboBox_function.currentText()
         try:
-            camera = threading.Thread(target=self.show_camera)
-            camera.start()
+            if self.mode != '码垛' and self.mode != 'Palletizing':
+                camera = threading.Thread(target=self.show_camera)
+                camera.start()
+            else:
+                pallet_camera = threading.Thread(target=self.pallet_show_camera)
+                pallet_camera.start()
         except Exception as e:
             e = traceback.format_exc()
             self.loger.error(e)
@@ -650,6 +994,9 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
             self.loger.error(e)
 
     def show_camera(self):
+        """
+        颜色、图像、特征点、yolov5摄像头画面信息
+        """
         self.show_camera_lab_rgb.show()
         self.show_camera_lab_depth.show()
         if self.language == 1:
@@ -658,16 +1005,71 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
             self.open_camera_btn.setText('关闭')
         self.btn_color(self.open_camera_btn, 'red')
         try:
-            while True:
-                rgb = self.detector.rgb_show
-                depth = self.detector.depth_show
-                rgb_show = QImage(rgb, rgb.shape[1], rgb.shape[0], QImage.Format_RGB888)
-                depth_show = QImage(depth, depth.shape[1], depth.shape[0], QImage.Format_RGB888)
-                pixmap_color = QPixmap(rgb_show)
-                pixmap_color = pixmap_color.scaled(320, 240, Qt.KeepAspectRatio)
-                self.show_camera_lab_rgb.setPixmap(pixmap_color)
-                self.show_camera_lab_depth.setPixmap(QPixmap.fromImage(depth_show))
-                time.sleep(0.5)
+            # while True:
+            # rgb = self.detector.rgb_show
+            # depth = self.detector.depth_show
+            # rgb_show = QImage(rgb, rgb.shape[1], rgb.shape[0], QImage.Format_RGB888)
+            # depth_show = QImage(depth, depth.shape[1], depth.shape[0], QImage.Format_RGB888)
+            # pixmap_color = QPixmap(rgb_show)
+            # pixmap_color = pixmap_color.scaled(320, 240, Qt.KeepAspectRatio)
+            # self.show_camera_lab_rgb.setPixmap(pixmap_color)
+            # self.show_camera_lab_depth.setPixmap(QPixmap.fromImage(depth_show))
+            # time.sleep(0.5)
+            # 开启缓解摄像头画面卡顿的线程类
+            self.camera_video_thread = CameraVideoThread()
+            self.camera_video_thread.frame_signal.connect(self.update_image)
+            self.camera_video_thread.processed_frame_signal.connect(self.update_processed_image)
+            self.camera_video_thread.start()
+        except Exception as e:
+            e = traceback.format_exc()
+            self.loger.error('Failed to open camera:' + str(e))
+            if self.language == 1:
+                self.prompts(
+                    'The camera failed to open, please check whether the camera connection is correct, please start the recognition program first.')
+            else:
+                self.prompts('相机打开失败，请检查摄像头连接是否正确,请先启动识别程序.')
+            if self.language == 1:
+                self.open_camera_btn.setText('Open')
+            else:
+                self.open_camera_btn.setText('打开')
+            self.btn_color(self.open_camera_btn, 'green')
+
+    @pyqtSlot(QImage)
+    def update_image(self, image):
+        # 在主线程中更新UI元素
+        pixmap = QPixmap.fromImage(image)
+        self.show_camera_lab_rgb.setPixmap(pixmap.scaled(320, 240))
+
+    @pyqtSlot(QImage)
+    def update_processed_image(self, image):
+        # 在主线程中更新UI元素
+        pixmap = QPixmap.fromImage(image)
+        self.show_camera_lab_depth.setPixmap(pixmap.scaled(320, 240))
+
+    def pallet_show_camera(self):
+        """码垛程序显示摄像头画面"""
+        self.show_camera_lab_rgb.show()
+        self.show_camera_lab_depth.show()
+        if self.language == 1:
+            self.open_camera_btn.setText('Close')
+        else:
+            self.open_camera_btn.setText('关闭')
+        self.btn_color(self.open_camera_btn, 'red')
+        try:
+            # while True:
+            #     rgb = self.rgb_show
+            #     depth = self.depth_show
+            #     rgb_show = QImage(rgb, rgb.shape[1], rgb.shape[0], QImage.Format_RGB888)
+            #     depth_show = QImage(depth, depth.shape[1], depth.shape[0], QImage.Format_RGB888)
+            #     pixmap_color = QPixmap(rgb_show)
+            #     pixmap_color = pixmap_color.scaled(320, 240, Qt.KeepAspectRatio)
+            #     self.show_camera_lab_rgb.setPixmap(pixmap_color)
+            #     self.show_camera_lab_depth.setPixmap(QPixmap.fromImage(depth_show))
+            #     time.sleep(0.5)
+            self.video_thread = VideoThread()
+            self.video_thread.frame_signal.connect(self.update_image)
+            self.video_thread.processed_frame_signal.connect(self.update_processed_image)
+            self.video_thread.start()
         except Exception as e:
             e = traceback.format_exc()
             self.loger.error('Failed to open camera:' + str(e))
@@ -684,30 +1086,35 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
 
     # 机械臂开始动作
     def start_pick(self):
-        if self.device == 'mechArm 270 for M5':
-            self.camera_x = int(self.x_offset_lineEdit.text())
-            self.camera_y = int(self.y_offset_lineEdit.text())
-            self.camera_z = int(self.z_offset_lineEdit.text())
-            move = threading.Thread(target=self.run_270_M5)
-            move.start()
-        elif self.device == 'mechArm 270 for Pi':
-            self.camera_x = int(self.x_offset_lineEdit.text())
-            self.camera_y = int(self.y_offset_lineEdit.text())
-            self.camera_z = int(self.z_offset_lineEdit.text())
-            move = threading.Thread(target=self.run_270_Pi)
-            move.start()
-        elif self.device == 'myCobot 280 for M5':
-            self.camera_x = int(self.x_offset_lineEdit.text())
-            self.camera_y = int(self.y_offset_lineEdit.text())
-            self.camera_z = int(self.z_offset_lineEdit.text())
-            move = threading.Thread(target=self.run_280_M5)
-            move.start()
-        elif self.device == 'myCobot 280 for Pi':
-            self.camera_x = int(self.x_offset_lineEdit.text())
-            self.camera_y = int(self.y_offset_lineEdit.text())
-            self.camera_z = int(self.z_offset_lineEdit.text())
-            move = threading.Thread(target=self.run_280_Pi)
-            move.start()
+        self.mode = self.comboBox_function.currentText()
+        self.device = self.comboBox_device.currentText()
+        if self.mode != '码垛' and self.mode != 'Palletizing':
+            if self.device == 'mechArm 270 for M5':
+                self.camera_x = int(self.x_offset_lineEdit.text())
+                self.camera_y = int(self.y_offset_lineEdit.text())
+                self.camera_z = int(self.z_offset_lineEdit.text())
+                move = threading.Thread(target=self.run_270_M5)
+                move.start()
+            elif self.device == 'mechArm 270 for Pi':
+                self.camera_x = int(self.x_offset_lineEdit.text())
+                self.camera_y = int(self.y_offset_lineEdit.text())
+                self.camera_z = int(self.z_offset_lineEdit.text())
+                move = threading.Thread(target=self.run_270_Pi)
+                move.start()
+            elif self.device == 'myCobot 280 for M5':
+                self.camera_x = int(self.x_offset_lineEdit.text())
+                self.camera_y = int(self.y_offset_lineEdit.text())
+                self.camera_z = int(self.z_offset_lineEdit.text())
+                move = threading.Thread(target=self.run_280_M5)
+                move.start()
+            elif self.device == 'myCobot 280 for Pi':
+                self.camera_x = int(self.x_offset_lineEdit.text())
+                self.camera_y = int(self.y_offset_lineEdit.text())
+                self.camera_z = int(self.z_offset_lineEdit.text())
+                move = threading.Thread(target=self.run_280_Pi)
+                move.start()
+        else:
+            self.loger.info('当前为码垛算法程序/Current is Palletizing')
 
     # 获取机械臂当前坐标
     def get_current_coords(self):
@@ -726,10 +1133,21 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
             pass
 
     def get_pixel(self):
-        while True:
-            x, y, z = np.round(self.detector.world_x, 2), np.round(self.detector.world_y, 2), self.detector.world_z
-            self.img_coord_lab.setText("    X:" + str(x) + "    Y:" + str(y) + "    Z:" + str(z))
-            time.sleep(0.5)
+        self.mode = self.comboBox_function.currentText()
+        if self.mode != '码垛' and self.mode != 'Palletizing':
+            while True:
+                x, y, z = np.round(self.detector.world_x, 2), np.round(self.detector.world_y, 2), self.detector.world_z
+                self.img_coord_lab.setText("    X:" + str(x) + "    Y:" + str(y) + "    Z:" + str(z))
+                time.sleep(0.5)
+        else:
+            # 码垛程序的像素
+            while True:
+                self.grip_pos_x = np.round(self.grip_pos_x, 2)
+                self.grip_pos_y = np.round(self.grip_pos_y, 2)
+                self.grip_pos_z = np.round(self.grip_pos_z, 2)
+                self.img_coord_lab.setText(
+                    "    X:" + str(self.grip_pos_x) + "    Y:" + str(self.grip_pos_y) + "    Z:" + str(self.grip_pos_z))
+                time.sleep(0.5)
 
     # 获取物体相对于机械臂的实际坐标
     def get_real_coords(self):
@@ -740,13 +1158,24 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
             pass
 
     def get_real(self):
-        while True:
-            self.real_x = np.round(self.camera_x + self.detector.world_y, 2)
-            self.real_y = np.round(self.camera_y - self.detector.world_x, 2)
-            self.real_z = np.round(self.camera_z - self.detector.world_z, 2)
-            self.cuttent_coord_lab.setText(
-                "    X:" + str(self.real_x) + "    Y:" + str(self.real_y) + "    Z:" + str(self.real_z))
-            time.sleep(0.5)
+        self.mode = self.comboBox_function.currentText()
+        if self.mode != '码垛' and self.mode != 'Palletizing':
+            while True:
+                self.real_x = np.round(self.camera_x + self.detector.world_y, 2)
+                self.real_y = np.round(self.camera_y - self.detector.world_x, 2)
+                self.real_z = np.round(self.camera_z - self.detector.world_z, 2)
+                self.cuttent_coord_lab.setText(
+                    "    X:" + str(self.real_x) + "    Y:" + str(self.real_y) + "    Z:" + str(self.real_z))
+                time.sleep(0.5)
+        else:
+            # 码垛程序的定位
+            while True:
+                self.pos_x = np.round(self.pos_x, 2)
+                self.pos_y = np.round(self.pos_y, 2)
+                self.pos_z = np.round(self.pos_z, 2)
+                self.cuttent_coord_lab.setText(
+                    "    X:" + str(self.pos_x) + "    Y:" + str(self.pos_y) + "    Z:" + str(self.pos_z))
+                time.sleep(0.5)
 
     # 开启吸泵
     def pump_on(self):
@@ -788,7 +1217,6 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
         # 到达物体
         self.robotics.send_coord(3, self.real_z, 50)
         time.sleep(3)
-
         # 开启吸泵
         self.pump_on()
         time.sleep(3)
@@ -949,6 +1377,80 @@ class AiKit_APP(AiKit_window, QMainWindow, QWidget):
         except Exception as e:
             e = traceback.format_exc()
             self.loger.error(str(e))
+
+
+class VideoThread(QThread):
+    """
+    码垛识别程序摄像头线程类
+    """
+    frame_signal = pyqtSignal(QImage)
+    processed_frame_signal = pyqtSignal(QImage)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.running = False
+        # 日志信息
+        self.log = MyLogging().logger
+
+    def run(self):
+        self.running = True
+
+        while self.running:
+            try:
+                time.sleep((0.1))  # 需修改为标志位
+                # rgb转为qt图像
+                rgb = AiKit_window.rgb_show
+
+                rgb_show = QImage(rgb, rgb.shape[1], rgb.shape[0], QImage.Format_RGB888)
+
+                # 发送rgb图像信号给主线程
+                self.frame_signal.emit(rgb_show)
+
+                # depth转为qt图像
+                depth = AiKit_window.depth_show
+                depth_show = QImage(depth, depth.shape[1], depth.shape[0], QImage.Format_RGB888)
+
+                # 发送depth图像信号给主线程
+                self.processed_frame_signal.emit(depth_show)
+            except Exception as e:
+                e = traceback.format_exc()
+                self.log.error(e)
+
+
+class CameraVideoThread(QThread):
+    """"
+    颜色、图像、特征点、yolov5等识别的摄像头线程类
+    """
+    frame_signal = pyqtSignal(QImage)
+    processed_frame_signal = pyqtSignal(QImage)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.running = False
+        # 日志信息
+        self.log = MyLogging().logger
+
+    def run(self):
+        self.running = True
+        while self.running:
+            try:
+                time.sleep((0.1))  # 需修改为标志位
+                # rgb转为qt图像
+                rgb = AiKit_window.camera_rgb_show
+                rgb_show = QImage(rgb, rgb.shape[1], rgb.shape[0], QImage.Format_RGB888)
+
+                # 发送rgb图像信号给主线程
+                self.frame_signal.emit(rgb_show)
+
+                # depth转为qt图像
+                depth = AiKit_window.camera_depth_show
+                depth_show = QImage(depth, depth.shape[1], depth.shape[0], QImage.Format_RGB888)
+
+                # 发送depth图像信号给主线程
+                self.processed_frame_signal.emit(depth_show)
+            except Exception as e:
+                e = traceback.format_exc()
+                self.log.error(e)
 
 
 if __name__ == '__main__':
